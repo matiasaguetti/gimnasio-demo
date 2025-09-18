@@ -93,4 +93,66 @@ async function init(){
 }
 
 function renderMember(m){
-  const endDate = parseDateCell(m['end_da_]()
+  const endDate = parseDateCell(m['end_date'] || m['End Date'] || "");
+  const left = daysLeftFromDate(endDate);
+  const estado = left === null ? 'Sin fecha' : (left > 0 ? 'Vigente' : (left === 0 ? 'Vence hoy' : 'Vencido'));
+  return `
+    <div class="bg-white p-6 rounded-lg shadow">
+      <div class="flex items-center gap-4">
+        <div class="h-14 w-14 rounded-full bg-blue-100 flex items-center justify-center text-xl font-bold text-blue-700">${(m.nombre || '').charAt(0) || '?'}</div>
+        <div>
+          <div class="text-lg font-semibold">${(m.nombre || '')} ${(m.apellido || '')}</div>
+          <div class="text-sm text-gray-600">${m.email || ''} — ${m.telefono || ''}</div>
+        </div>
+      </div>
+
+      <div class="mt-4 grid grid-cols-2 gap-4">
+        <div>
+          <div class="text-xs text-gray-500">Categoría</div>
+          <div class="font-medium">${m.categoria || '—'}</div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-500">Plan</div>
+          <div class="font-medium">${m.plan || '—'}</div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-500">Método pago</div>
+          <div class="font-medium">${m.payment_method || m['payment_method'] || '—'}</div>
+        </div>
+        <div>
+          <div class="text-xs text-gray-500">Estado</div>
+          <div class="font-medium">${estado}${left !== null && left>0 ? ' — ' + left + ' días' : ''}</div>
+        </div>
+      </div>
+
+      <div class="mt-4 text-sm text-gray-500">Activo: ${m.activo || '—'} ${m.notas ? ' · Nota: ' + m.notas : ''}</div>
+    </div>
+  `;
+}
+
+function renderNotFound(q){
+  return `<div class="p-4 bg-yellow-50 text-yellow-800 rounded">No se encontró: <strong>${q}</strong></div>`;
+}
+
+btn.addEventListener('click', ()=> doSearch());
+input.addEventListener('keydown', (e)=> { if(e.key==='Enter') doSearch(); });
+
+function doSearch(){
+  const q = (input.value || '').trim().toLowerCase();
+  if(!q) { resultEl.innerHTML = `<div class="p-4 bg-gray-100 rounded">Ingresa id, email o teléfono</div>`; return; }
+  const found = members.find(m => {
+    const id = (m.id || '').toString().toLowerCase();
+    const email = (m.email || '').toString().toLowerCase();
+    const tel = (m.telefono || m.phone || '').toString().toLowerCase();
+    const full = ((m.nombre||'') + ' ' + (m.apellido||'')).toLowerCase();
+    return id === q || email === q || tel === q || email.includes(q) || tel.includes(q) || full.includes(q);
+  });
+  if(found) resultEl.innerHTML = renderMember(found);
+  else resultEl.innerHTML = renderNotFound(q);
+}
+
+/* inicializa */
+init();
+</script>
+</body>
+</html>
