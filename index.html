@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Consulta socios - Demo Boulder</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 text-gray-800">
+  <main class="max-w-3xl mx-auto p-6">
+    <h1 class="text-2xl font-semibold mb-4">Consulta de plan - Gimnasio Boulder (Demo)</h1>
+
+    <div class="bg-white p-4 rounded-lg shadow mb-6">
+      <label class="block mb-2 text-sm font-medium">Busca por <span class="font-semibold">id, email o teléfono</span>:</label>
+      <div class="flex gap-2">
+        <input id="q" class="flex-1 border rounded px-3 py-2" placeholder="Ej: M0001 o lucia.g@example.com o 549112345678" />
+        <button id="btnSearch" class="bg-blue-600 text-white px-4 rounded">Buscar</button>
+      </div>
+      <p id="hint" class="text-xs text-gray-500 mt-2">Datos de ejemplo tomados de la hoja. Asegúrate de publicar la hoja (Archivo → Publicar en la web).</p>
+    </div>
+
+    <div id="result"></div>
+  </main>
+
+<script>
+/* CONFIG: valores ya reemplazados */
+const SHEET_ID = "1Qn7QTiAiIsQ4DEyflHbjC9PcHRNm0KV5bedhO25ZVF4";
+const GID = "0";
+
+/* Helpers para consumir gviz */
+async function fetchSheetGviz(sheetId, gid='0'){
+  const url = `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:json&gid=${gid}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('HTTP ' + res.status + ' - ' + res.statusText);
+  const text = await res.text();
+  const start = text.indexOf('{');
+  const end = text.lastIndexOf('}');
+  if(start === -1 || end === -1) throw new Error('Formato gviz inesperado');
+  const jsonText = text.substring(start, end + 1);
+  return JSON.parse(jsonText);
+}
+
+function buildRowsFromGviz(data){
+  const cols = (data.table.cols || []).map(c => (c.label && c.label.trim()) ? c.label.trim() : (c.id || ""));
+  const rows = (data.table.rows || []).map(r => {
+    const obj = {};
+    r.c.forEach((cell,i) => {
+      obj[cols[i] || ('col'+i)] = cell ? cell.v : "";
+    });
+    return obj;
+  });
+  return rows;
+}
+
+function parseDateCell(v){
+  if(v === "" || v === null || v === undefined) return null;
+  if(typeof v === 'object' && v.year !== undefined){ // formato gviz para fechas
+    return new Date(v.year, v.month, v.day);
+  }
+  const s = String(v).trim();
+  let m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if(m) return new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  m = s.match(/Date\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if(m) return new Date(Number(m[1]), Number(m[2]), Number(m[3]));
+  const dt = new Date(s);
+  return isNaN(dt) ? null : dt;
+}
+
+function daysLeftFromDate(d){
+  if(!d) return null;
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endOfDay = new Date(d.getFullYear(), d.getMonth(), d.getDate(), 23,59,59);
+  const diff = Math.ceil((endOfDay - today) / (1000*60*60*24));
+  return Math.max(0, diff);
+}
+
+/* UI */
+const resultEl = document.getElementById('result');
+const btn = document.getElementById('btnSearch');
+const input = document.getElementById('q');
+
+let members = [];
+
+async function init(){
+  try{
+    const data = await fetchSheetGviz(SHEET_ID, GID);
+    members = buildRowsFromGviz(data);
+    // console.log(members);
+  }catch(e){
+    resultEl.innerHTML = `<div class="p-4 bg-red-100 text-red-800 rounded">Error al cargar la hoja: ${e.message}</div>`;
+  }
+}
+
+function renderMember(m){
+  const endDate = parseDateCell(m['end_da_]()
